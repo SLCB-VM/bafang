@@ -5,15 +5,40 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bafang Firmware List</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind custom animation -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          keyframes: {
+            popin: {
+              '0%': { opacity: '0', transform: 'scale(0.8)' },
+              '100%': { opacity: '1', transform: 'scale(1)' },
+            },
+          },
+          animation: {
+            popin: 'popin 0.5s ease-out forwards',
+          },
+        }
+      }
+    }
+  </script>
 </head>
 <body class="bg-gray-100 text-gray-900">
-  <header class="bg-blue-600 text-white py-4 shadow">
-    <div class="max-w-6xl mx-auto px-6">
-      <h1 class="text-2xl font-bold">Bafang Firmware List</h1>
-      <p class="text-sm opacity-90">Loads via CORS-friendly HTTPS proxies automatically</p>
+
+  <!-- Header -->
+  <header class="bg-orange-800 text-white py-4 shadow">
+    <div class="max-w-6xl mx-auto px-6 flex items-center gap-4">
+      <img src="logo.svg" alt="Logo" class="h-10 w-10">
+      <div>
+        <h1 class="text-2xl font-bold">Bafang Firmware List</h1>
+        <p class="text-sm opacity-90">Loads via CORS-friendly HTTPS proxies automatically</p>
+      </div>
     </div>
   </header>
 
+  <!-- Main content -->
   <main class="max-w-6xl mx-auto px-6 py-6">
     <div class="mb-4 flex flex-wrap gap-3 items-center">
       <input id="search" type="text" placeholder="Search name/category/version..." class="px-3 py-2 rounded border w-full md:w-80">
@@ -23,17 +48,10 @@
   </main>
 
   <script>
-    // --- Original API (HTTP, often blocked by browsers if your page is HTTPS) ---
-    const ORIGIN =
-      "https://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c";
-
-    // --- HTTPS CORS-friendly fallbacks (no server needed) ---
+    const ORIGIN = "https://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c";
     const FALLBACKS = [
-      // r.jina.ai returns the raw body with permissive CORS
       "https://r.jina.ai/http://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c",
-      // allorigins returns raw body; add URL-encoded target
       "https://api.allorigins.win/raw?url=" + encodeURIComponent(ORIGIN),
-      // generic CORS proxy
       "https://cors.isomorphic-git.org/" + ORIGIN
     ];
 
@@ -49,6 +67,7 @@
       while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
       return (v >= 10 || i === 0 ? v.toFixed(0) : v.toFixed(2)) + " " + u[i];
     }
+
     const norm = x => (x ?? "").toString().toLowerCase();
 
     function getArrayFromApi(data) {
@@ -67,9 +86,21 @@
         elList.innerHTML = '<p class="text-gray-600 col-span-full text-center">No items to show.</p>';
         return;
       }
-      for (const it of items) {
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            entry.target.style.animationDelay = `${entry.target.dataset.index * 100}ms`; // staggered
+            entry.target.classList.add('animate-popin');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      items.forEach((it, idx) => {
         const card = document.createElement("div");
-        card.className = "bg-white rounded-xl shadow p-4 flex flex-col";
+        card.dataset.index = idx;
+        card.className = "bg-white rounded-xl shadow p-4 flex flex-col opacity-0"; // hidden initially
         card.innerHTML = `
           <h2 class="text-lg font-bold mb-0.5">${it.itemName || "Unknown"}</h2>
           <p class="text-sm text-gray-500 mb-3">${it.itemCategoryName || "N/A"}</p>
@@ -82,12 +113,13 @@
           </div>
           ${it.downloadUrl ? `
             <a href="${it.downloadUrl}" target="_blank" rel="noopener"
-              class="mt-auto inline-block text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+              class="mt-auto inline-block text-center bg-orange-700 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">
               Download
             </a>` : `<span class="text-xs text-red-600 mt-auto">No download URL</span>`}
         `;
         elList.appendChild(card);
-      }
+        observer.observe(card);
+      });
     }
 
     let ALL = [];
@@ -97,7 +129,6 @@
       const ct = resp.headers.get("content-type") || "";
       const body = ct.includes("application/json") ? await resp.json() : await resp.text();
       if (!resp.ok) throw new Error(`HTTP ${resp.status} — ${typeof body === "string" ? body.slice(0,200) : JSON.stringify(body)}`);
-      // If we used a raw proxy (text), try to parse to JSON
       return typeof body === "string" ? JSON.parse(body) : body;
     }
 

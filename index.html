@@ -129,11 +129,11 @@
             <p><span class="font-semibold">File name:</span> ${it.fileName || "N/A"}</p>
             <p><span class="font-semibold">File size:</span> ${it.fileSize != null ? formatBytes(it.fileSize) : "N/A"}</p>
           </div>
-          ${it.downloadUrl ? `
-            <a href="${it.downloadUrl}" download
-              class="btn-orange mt-auto px-4 py-2 rounded-lg text-center font-semibold">
-              Download
-            </a>` : `<span class="text-xs text-red-600 mt-auto">No download URL</span>`}
+          ${it.downloadUrl ? `<a href={`/api/proxy?url=${encodeURIComponent(it.downloadUrl)}`} 
+   target="_blank" rel="noopener"
+   class="btn-orange mt-auto px-4 py-2 rounded-lg text-center font-semibold">
+   Download
+</a>` : `<span class="text-xs text-red-600 mt-auto">No download URL</span>`}
         `;
         elList.appendChild(card);
         observer.observe(card);
@@ -196,6 +196,7 @@
   </script>
 </body>
 </html>
+
 
 
 

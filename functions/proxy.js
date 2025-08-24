@@ -4,12 +4,20 @@ export async function handler(event) {
     return { statusCode: 400, body: "Missing url parameter" };
   }
 
-  // Redirect the browser to the real firmware URL
-  return {
-    statusCode: 302,
-    headers: {
-      "Location": fileUrl,
-      "Cache-Control": "no-cache",
-    },
-  };
+  try {
+    const res = await fetch(fileUrl);
+    const buffer = Buffer.from(await res.arrayBuffer());
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": res.headers.get("content-type") || "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${fileUrl.split("/").pop()}"`,
+        "Cache-Control": "no-cache",
+      },
+      body: buffer,
+    };
+  } catch (err) {
+    return { statusCode: 500, body: err.toString() };
+  }
 }

@@ -9,7 +9,17 @@ export async function handler(event) {
     const arrayBuffer = await res.arrayBuffer();
     const base64File = Buffer.from(arrayBuffer).toString("base64");
 
-    const fileName = fileUrl.split("/").pop() || "firmware.bin";
+    // Try to get original filename from server header
+    let fileName = "firmware.bin";
+    const contentDisp = res.headers.get("content-disposition");
+    if (contentDisp) {
+      const match = contentDisp.match(/filename="?([^"]+)"?/);
+      if (match) fileName = match[1];
+    } else {
+      // fallback: extract from URL
+      const urlParts = new URL(fileUrl);
+      fileName = urlParts.pathname.split("/").pop() || "firmware.bin";
+    }
 
     return {
       statusCode: 200,

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bafang Firmware List</title>
@@ -49,7 +50,7 @@
   <!-- Header -->
   <header class="bg-orange-600 text-white py-4 shadow">
     <div class="max-w-6xl mx-auto px-6 flex items-center gap-4">
-      <img src="logo.svg" alt="Logo" class="h-10 w-10">
+      <img src="logo.svg" alt="Logo" class="h-14 w-14"> <!-- bigger logo -->
       <div>
         <h1 class="text-2xl font-bold">Bafang Firmware List</h1>
         <p class="text-sm opacity-90">Loads via CORS-friendly HTTPS proxies automatically</p>
@@ -67,7 +68,7 @@
   </main>
 
   <script>
-    const ORIGIN = "https://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c";
+    const ORIGIN = "http://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c";
     const FALLBACKS = [
       "https://r.jina.ai/http://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c",
       "https://api.allorigins.win/raw?url=" + encodeURIComponent(ORIGIN),
@@ -117,7 +118,7 @@
 
       items.forEach((it) => {
         const card = document.createElement("div");
-        card.className = "bg-orange-200 rounded-xl shadow p-4 flex flex-col opacity-0"; // lighter orange
+        card.className = "bg-white rounded-xl shadow p-4 flex flex-col opacity-0"; // white background
         card.innerHTML = `
           <h2 class="text-lg font-bold mb-0.5">${it.itemName || "Unknown"}</h2>
           <p class="text-sm text-gray-700 mb-3">${it.itemCategoryName || "N/A"}</p>

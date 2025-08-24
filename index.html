@@ -10,7 +10,7 @@
   <header class="bg-blue-600 text-white py-4 shadow">
     <div class="max-w-6xl mx-auto px-6">
       <h1 class="text-2xl font-bold">Bafang Firmware List</h1>
-      <p class="text-sm opacity-90">Loads firmware live via Netlify Function proxy</p>
+      <p class="text-sm opacity-90">Loads via CORS-friendly HTTPS proxies automatically</p>
     </div>
   </header>
 
@@ -23,7 +23,19 @@
   </main>
 
   <script>
-    const API_URL = "/.netlify/functions/firmware"; // Your serverless function proxy
+    // --- Original API (HTTP, often blocked by browsers if your page is HTTPS) ---
+    const ORIGIN =
+      "https://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c";
+
+    // --- HTTPS CORS-friendly fallbacks (no server needed) ---
+    const FALLBACKS = [
+      // r.jina.ai returns the raw body with permissive CORS
+      "https://r.jina.ai/http://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c",
+      // allorigins returns raw body; add URL-encoded target
+      "https://api.allorigins.win/raw?url=" + encodeURIComponent(ORIGIN),
+      // generic CORS proxy
+      "https://cors.isomorphic-git.org/" + ORIGIN
+    ];
 
     const elList = document.getElementById("firmware-list");
     const elStatus = document.getElementById("status");
@@ -37,13 +49,14 @@
       while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
       return (v >= 10 || i === 0 ? v.toFixed(0) : v.toFixed(2)) + " " + u[i];
     }
-
     const norm = x => (x ?? "").toString().toLowerCase();
 
     function getArrayFromApi(data) {
       if (Array.isArray(data)) return data;
       if (Array.isArray(data?.result)) return data.result;
       if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.records)) return data.records;
+      if (Array.isArray(data?.list)) return data.list;
       const firstArr = Object.values(data || {}).find(Array.isArray);
       return firstArr || [];
     }
@@ -77,15 +90,38 @@
       }
     }
 
+    let ALL = [];
+
+    async function fetchJson(url) {
+      const resp = await fetch(url, { cache: "no-store" });
+      const ct = resp.headers.get("content-type") || "";
+      const body = ct.includes("application/json") ? await resp.json() : await resp.text();
+      if (!resp.ok) throw new Error(`HTTP ${resp.status} — ${typeof body === "string" ? body.slice(0,200) : JSON.stringify(body)}`);
+      // If we used a raw proxy (text), try to parse to JSON
+      return typeof body === "string" ? JSON.parse(body) : body;
+    }
+
+    async function loadWithFallbacks() {
+      const urls = [ORIGIN, ...FALLBACKS];
+      const errors = [];
+      for (const u of urls) {
+        try {
+          elStatus.textContent = `Loading… (${u})`;
+          const data = await fetchJson(u);
+          return data;
+        } catch (e) {
+          errors.push(`${u} -> ${String(e).slice(0,200)}`);
+        }
+      }
+      throw new Error("All attempts failed:\n" + errors.join("\n"));
+    }
+
     async function init() {
       try {
-        elStatus.textContent = "Loading…";
-        const resp = await fetch(API_URL);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        const items = getArrayFromApi(data);
-        elStatus.textContent = `${items.length} item(s) loaded`;
-        render(items);
+        const data = await loadWithFallbacks();
+        ALL = getArrayFromApi(data);
+        elStatus.textContent = `${ALL.length} item(s)`;
+        render(ALL);
       } catch (e) {
         elStatus.textContent = "";
         elList.innerHTML = `
@@ -93,7 +129,6 @@
             <p class="font-semibold mb-1">Failed to load firmware data.</p>
             <p class="text-sm">${String(e)}</p>
           </div>`;
-        console.error(e);
       }
     }
 
@@ -108,8 +143,7 @@
       render(filtered);
     });
 
-    let ALL = [];
-    init().then(() => ALL = getArrayFromApi(window.ALL || []));
+    init();
   </script>
 </body>
 </html>

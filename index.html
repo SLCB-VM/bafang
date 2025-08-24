@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bafang Firmware List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <header class="bg-blue-600 text-white py-4 shadow">
+    <div class="max-w-6xl mx-auto px-6">
+      <h1 class="text-2xl font-bold">Bafang Firmware List</h1>
+      <p class="text-sm opacity-90">Loads firmware live via Netlify Function proxy</p>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-6">
+    <div class="mb-4 flex flex-wrap gap-3 items-center">
+      <input id="search" type="text" placeholder="Search name/category/version..." class="px-3 py-2 rounded border w-full md:w-80">
+      <span id="status" class="text-sm text-gray-600"></span>
+    </div>
+    <div id="firmware-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <script>
+    const API_URL = "/.netlify/functions/firmware"; // Your serverless function proxy
+
+    const elList = document.getElementById("firmware-list");
+    const elStatus = document.getElementById("status");
+    const elSearch = document.getElementById("search");
+
+    function formatBytes(bytes) {
+      const n = Number(bytes);
+      if (!Number.isFinite(n)) return "N/A";
+      const u = ["B","KB","MB","GB"];
+      let i = 0, v = n;
+      while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+      return (v >= 10 || i === 0 ? v.toFixed(0) : v.toFixed(2)) + " " + u[i];
+    }
+
+    const norm = x => (x ?? "").toString().toLowerCase();
+
+    function getArrayFromApi(data) {
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.result)) return data.result;
+      if (Array.isArray(data?.data)) return data.data;
+      const firstArr = Object.values(data || {}).find(Array.isArray);
+      return firstArr || [];
+    }
+
+    function render(items) {
+      elList.innerHTML = "";
+      if (!items.length) {
+        elList.innerHTML = '<p class="text-gray-600 col-span-full text-center">No items to show.</p>';
+        return;
+      }
+      for (const it of items) {
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-xl shadow p-4 flex flex-col";
+        card.innerHTML = `
+          <h2 class="text-lg font-bold mb-0.5">${it.itemName || "Unknown"}</h2>
+          <p class="text-sm text-gray-500 mb-3">${it.itemCategoryName || "N/A"}</p>
+          <div class="text-sm space-y-1.5 mb-4">
+            <p><span class="font-semibold">Hardware:</span> ${it.hardware || "N/A"}</p>
+            <p><span class="font-semibold">Software:</span> ${it.software || "N/A"}</p>
+            <p><span class="font-semibold">Version:</span> ${it.version || "N/A"}</p>
+            <p><span class="font-semibold">File name:</span> ${it.fileName || "N/A"}</p>
+            <p><span class="font-semibold">File size:</span> ${it.fileSize != null ? formatBytes(it.fileSize) : "N/A"}</p>
+          </div>
+          ${it.downloadUrl ? `
+            <a href="${it.downloadUrl}" target="_blank" rel="noopener"
+              class="mt-auto inline-block text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+              Download
+            </a>` : `<span class="text-xs text-red-600 mt-auto">No download URL</span>`}
+        `;
+        elList.appendChild(card);
+      }
+    }
+
+    async function init() {
+      try {
+        elStatus.textContent = "Loading…";
+        const resp = await fetch(API_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const items = getArrayFromApi(data);
+        elStatus.textContent = `${items.length} item(s) loaded`;
+        render(items);
+      } catch (e) {
+        elStatus.textContent = "";
+        elList.innerHTML = `
+          <div class="col-span-full bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg whitespace-pre-wrap">
+            <p class="font-semibold mb-1">Failed to load firmware data.</p>
+            <p class="text-sm">${String(e)}</p>
+          </div>`;
+        console.error(e);
+      }
+    }
+
+    elSearch.addEventListener("input", e => {
+      const q = norm(e.target.value);
+      if (!q) return render(ALL);
+      const filtered = ALL.filter(it => {
+        const hay = [it.itemName, it.itemCategoryName, it.hardware, it.software, it.version, it.fileName, it.partNo]
+          .map(norm).join(" ");
+        return hay.includes(q);
+      });
+      render(filtered);
+    });
+
+    let ALL = [];
+    init().then(() => ALL = getArrayFromApi(window.ALL || []));
+  </script>
+</body>
+</html>

@@ -6,7 +6,8 @@ export async function handler(event) {
 
   try {
     const res = await fetch(fileUrl);
-    const buffer = Buffer.from(await res.arrayBuffer());
+    const arrayBuffer = await res.arrayBuffer();
+    const base64File = Buffer.from(arrayBuffer).toString("base64");
 
     return {
       statusCode: 200,
@@ -15,7 +16,8 @@ export async function handler(event) {
         "Content-Disposition": `attachment; filename="${fileUrl.split("/").pop()}"`,
         "Cache-Control": "no-cache",
       },
-      body: buffer,
+      body: base64File,
+      isBase64Encoded: true, // important!
     };
   } catch (err) {
     return { statusCode: 500, body: err.toString() };

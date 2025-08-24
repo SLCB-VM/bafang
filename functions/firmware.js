@@ -4,8 +4,8 @@ import fetch from "node-fetch";
 export async function handler() {
   try {
     // Use a CORS-friendly HTTPS proxy for the HTTP API
-    const url = "http://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c";
-    const proxyUrl = "https://corsproxy.io/?"+encodeURIComponent(url);
+   const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent("http://eu-central-1.api.besst.bafang-service.com/client/1/sys/firmware/filter?page=0&pageSize=1000&token=a02d491af1d8ab9bd4bcfebecc376d6c");
+  const response = await fetch(proxyUrl, { method: "GET" });
 
     const response = await fetch(proxyUrl, { method: "GET" });
 

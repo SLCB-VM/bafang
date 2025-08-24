@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 export async function handler(event) {
   const fileUrl = event.queryStringParameters.url;
   if (!fileUrl) {
